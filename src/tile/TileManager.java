@@ -73,6 +73,11 @@ public class TileManager {
 
                 for (int col = 0; col < gp.maxWorldCol; col++) {
                     int tileIndex = Integer.parseInt(numbers[col]);
+                    if(tileIndex == 5){
+                        tileIndex = 4;
+                    }else if(tileIndex == 6){
+                        tileIndex = 4;
+                    }
 
                     if (tileIndex < 0 || tileIndex >= tile.length) {
                         throw new IllegalArgumentException("Invalid tile index at [" + row + "][" + col + "]: " + tileIndex);

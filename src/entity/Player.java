@@ -18,11 +18,14 @@ public class Player extends Entity{
     public final int screenX ;
     public final int screenY;
     public final int maxHealth = 50;
+    public long lastDamageTime = 0;
+    public final int damageCooldown = 1000;
 
 
     public Player(GamePannel gp, KeyHandler keyH){
         this.gp = gp;
         this.keyH = keyH;
+        this.damage = 10;
 
         screenX = gp.screenWidth / 2 - (gp.tileSize/2);
         screenY = gp.screenHeight / 2 - (gp.tileSize/2);
@@ -38,7 +41,7 @@ public class Player extends Entity{
         speed = 4;
         direction = "down";
         keyNum = 0;
-        blurRadius = 400;
+        blurRadius = 300;
     }
     public void getPlayerImage(){
 

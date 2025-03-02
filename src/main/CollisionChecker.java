@@ -7,6 +7,8 @@ import java.awt.*;
 
 public class CollisionChecker {
     GamePannel gp;
+    private int outSideLight = 250;
+    private int inSideLight = 400;
 
 
     public CollisionChecker(GamePannel gp) {
@@ -39,10 +41,10 @@ public class CollisionChecker {
                     }
                     switch (tileNum1){
                         case 4:
-                            entity.blurRadius = 200;
+                            entity.blurRadius = inSideLight;
                             break;
                         case 0:
-                            entity.blurRadius = 400;
+                            entity.blurRadius = outSideLight;
                             break;
                     }
                 }
@@ -58,10 +60,10 @@ public class CollisionChecker {
                     }
                     switch (tileNum1){
                         case 4:
-                            entity.blurRadius = 200;
+                            entity.blurRadius = inSideLight;
                             break;
                         case 0:
-                            entity.blurRadius = 400;
+                            entity.blurRadius = outSideLight;
                             break;
                     }
                 }
@@ -77,10 +79,10 @@ public class CollisionChecker {
                     }
                     switch (tileNum1){
                         case 4:
-                            entity.blurRadius = 200;
+                            entity.blurRadius = inSideLight;
                             break;
                         case 0:
-                            entity.blurRadius = 400;
+                            entity.blurRadius = outSideLight;
                             break;
                     }
                 }
@@ -96,10 +98,10 @@ public class CollisionChecker {
                     }
                     switch (tileNum1){
                         case 4:
-                            entity.blurRadius = 200;
+                            entity.blurRadius = inSideLight;
                             break;
                         case 0:
-                            entity.blurRadius = 400;
+                            entity.blurRadius = outSideLight;
                             break;
                     }
                 }
@@ -159,12 +161,6 @@ public class CollisionChecker {
             }
         }
     }
-
-
-
-
-
-
 
 
 }

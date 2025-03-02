@@ -1,13 +1,26 @@
 package entity;
 
 import main.GamePannel;
-
 import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.Random;
 
 public class Monsters extends Entity {
     GamePannel gp;
+    int targetX, targetY;
+    boolean isMoving = false;
+    int stepX, stepY;
+    Random rand = new Random();
+
+
+
+
+    int[][] moves = {
+            {2, 1}, {2, -1}, {-2, 1}, {-2, -1},
+            {1, 2}, {1, -2}, {-1, 2}, {-1, -2}
+    };
 
     public Monsters(GamePannel gp) {
         this.gp = gp;
@@ -15,83 +28,113 @@ public class Monsters extends Entity {
         getImage();
         setDefaultValues();
         solidArea = new Rectangle(0, 0, 48, 48);
-        direction = "down";
+        direction = "up";
+        this.damage = 10;
     }
 
     public void getImage() {
         try {
             up1 = ImageIO.read(getClass().getResource("/monster/boy_up_1.png"));
-            up2 = ImageIO.read(getClass().getResource("/monster/boy_up_1.png"));
-            down1 = ImageIO.read(getClass().getResource("/monster/boy_up_1.png"));
-            down2 = ImageIO.read(getClass().getResource("/monster/boy_up_1.png"));
-            right1 = ImageIO.read(getClass().getResource("/monster/boy_up_1.png"));
-            right2 = ImageIO.read(getClass().getResource("/monster/boy_up_1.png"));
-            left1 = ImageIO.read(getClass().getResource("/monster/boy_up_1.png"));
-            left2 = ImageIO.read(getClass().getResource("/monster/boy_up_1.png"));
+            up2 = ImageIO.read(getClass().getResource("/monster/boy_up_2.png"));
+            down1 = ImageIO.read(getClass().getResource("/monster/boy_down_1.png"));
+            down2 = ImageIO.read(getClass().getResource("/monster/boy_down_2.png"));
+            right1 = ImageIO.read(getClass().getResource("/monster/boy_right_1.png"));
+            right2 = ImageIO.read(getClass().getResource("/monster/boy_right_2.png"));
+            left1 = ImageIO.read(getClass().getResource("/monster/boy_left_1.png"));
+            left2 = ImageIO.read(getClass().getResource("/monster/boy_left_2.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public void setDefaultValues() {
-        speed = 2;
-        keyNum = 0;
+        speed = 1;
     }
 
     public void update() {
-        int playerX = gp.player.worldX;
-        int playerY = gp.player.worldY;
+        if (isMoving) {
+            moveStep();
+        } else {
+            findNewTarget();
+        }
 
-        int distanceX = Math.abs(worldX - playerX);
-        int distanceY = Math.abs(worldY - playerY);
+        if (checkPlayerCollision(this, gp.player)) {
+            long currentTime = System.currentTimeMillis();
 
-        boolean canMove = false;
+            if (currentTime - gp.player.lastDamageTime > gp.player.damageCooldown) {
+                gp.player.health = gp.player.health - damage ;
+                gp.player.lastDamageTime = currentTime;
+                System.out.println("Player-Monster collision detected! Health: " + gp.player.health);
+            }
+        }
+    }
 
+    private void findNewTarget() {
+        int[] shuffledIndexes = shuffleIndexes();
 
-        checkMonsterCollision(this);
+        for (int i = 0; i < moves.length; i++) {
+            int moveIndex = shuffledIndexes[i];
+            int newX = worldX + moves[moveIndex][0] * gp.tileSize;
+            int newY = worldY + moves[moveIndex][1] * gp.tileSize;
 
-        if (checkPlayerCollision(this, gp.player, direction)) {
+            if (!checkWallCollision(newX, newY) && !checkMonsterCollision(newX, newY)) {
+                targetX = newX;
+                targetY = newY;
+                stepX = (targetX - worldX) / (gp.tileSize / speed);
+                stepY = (targetY - worldY) / (gp.tileSize / speed);
+                isMoving = true;
+                return;
+            }
+        }
+    }
+
+    private void moveStep() {
+        int nextX = worldX + stepX;
+        int nextY = worldY + stepY;
+
+        if (checkWallCollision(nextX, nextY)) {
+            findNewTarget();
             return;
         }
 
-        if (distanceX < gp.screenWidth / 2 && distanceY < gp.screenHeight / 2) {
-            if (worldX < playerX) {
-                direction = "right";
-                if (!checkWallCollision("right")) {
-                    worldX += speed;
-                    canMove = true;
-                }
-            } else if (worldX > playerX) {
-                direction = "left";
-                if (!checkWallCollision("left")) {
-                    worldX -= speed;
-                    canMove = true;
-                }
-            }
-        }
+        worldX = nextX;
+        worldY = nextY;
 
-        if (distanceY < gp.screenHeight / 2 && distanceX < gp.screenWidth / 2) {
-            if (worldY < playerY) {
-                direction = "down";
-                if (!checkWallCollision("down")) {
-                    worldY += speed;
-                    canMove = true;
-                }
-            } else if (worldY > playerY) {
-                direction = "up";
-                if (!checkWallCollision("up")) {
-                    worldY -= speed;
-                    canMove = true;
-                }
-            }
-        }
-
-        if (!canMove) {
-            //
+        if (worldX == targetX && worldY == targetY) {
+            isMoving = false;
+            findNewTarget();
         }
     }
-    public boolean checkPlayerCollision(Entity monster, Entity player, String direction) {
 
+
+
+    private boolean checkWallCollision(int newX, int newY) {
+        int leftX   = (newX + solidArea.x) / gp.tileSize;
+        int rightX  = (newX + solidArea.x + solidArea.width) / gp.tileSize;
+        int topY    = (newY + solidArea.y) / gp.tileSize;
+        int bottomY = (newY + solidArea.y + solidArea.height) / gp.tileSize;
+
+        if (leftX < 0 || rightX >= gp.tileM.mapTileNum[0].length || topY < 0 || bottomY >= gp.tileM.mapTileNum.length) {
+            return true;
+        }
+
+        return gp.tileM.tile[gp.tileM.mapTileNum[topY][leftX]].collision ||
+                gp.tileM.tile[gp.tileM.mapTileNum[topY][rightX]].collision ||
+                gp.tileM.tile[gp.tileM.mapTileNum[bottomY][leftX]].collision ||
+                gp.tileM.tile[gp.tileM.mapTileNum[bottomY][rightX]].collision;
+    }
+
+
+    private boolean checkMonsterCollision(int newX, int newY) {
+        for (Monsters monster : gp.monsters) {
+            if (monster != null && monster != this && monster.worldX == newX && monster.worldY == newY) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean checkPlayerCollision(Entity monster, Entity player) {
         Rectangle playerSolidArea = new Rectangle(player.solidArea);
         Rectangle monsterSolidArea = new Rectangle(monster.solidArea);
 
@@ -101,56 +144,21 @@ public class Monsters extends Entity {
         playerSolidArea.x = player.worldX + player.solidArea.x;
         playerSolidArea.y = player.worldY + player.solidArea.y;
 
-        if (monsterSolidArea.intersects(playerSolidArea)) {
-            System.out.println("Player-Monster collision detected!");
-            return true;
-        }
 
-        return false;
+
+        return monsterSolidArea.intersects(playerSolidArea);
     }
 
-
-    public boolean checkWallCollision(String direction) {
-        int tileNum1, tileNum2;
-        boolean collision = false;
-
-        switch (direction) {
-            case "up":
-                tileNum1 = gp.tileM.mapTileNum[(worldY - speed) / gp.tileSize][worldX / gp.tileSize];
-                tileNum2 = gp.tileM.mapTileNum[(worldY - speed) / gp.tileSize][(worldX + solidArea.width) / gp.tileSize];
-                if (gp.tileM.tile[tileNum1].collision || gp.tileM.tile[tileNum2].collision) {
-                    collision = true;
-                }
-                break;
-
-            case "down":
-                tileNum1 = gp.tileM.mapTileNum[(worldY + speed + solidArea.height) / gp.tileSize][worldX / gp.tileSize];
-                tileNum2 = gp.tileM.mapTileNum[(worldY + speed + solidArea.height) / gp.tileSize][(worldX + solidArea.width) / gp.tileSize];
-                if (gp.tileM.tile[tileNum1].collision || gp.tileM.tile[tileNum2].collision) {
-                    collision = true;
-                }
-                break;
-
-            case "left":
-                tileNum1 = gp.tileM.mapTileNum[worldY / gp.tileSize][(worldX - speed) / gp.tileSize];
-                tileNum2 = gp.tileM.mapTileNum[(worldY + solidArea.height) / gp.tileSize][(worldX - speed) / gp.tileSize];
-                if (gp.tileM.tile[tileNum1].collision || gp.tileM.tile[tileNum2].collision) {
-                    collision = true;
-                }
-                break;
-
-            case "right":
-                tileNum1 = gp.tileM.mapTileNum[worldY / gp.tileSize][(worldX + speed + solidArea.width) / gp.tileSize];
-                tileNum2 = gp.tileM.mapTileNum[(worldY + solidArea.height) / gp.tileSize][(worldX + speed + solidArea.width) / gp.tileSize];
-                if (gp.tileM.tile[tileNum1].collision || gp.tileM.tile[tileNum2].collision) {
-                    collision = true;
-                }
-                break;
+    private int[] shuffleIndexes() {
+        int[] indexes = {0, 1, 2, 3, 4, 5, 6, 7};
+        for (int i = 0; i < indexes.length; i++) {
+            int randomIndex = rand.nextInt(indexes.length);
+            int temp = indexes[i];
+            indexes[i] = indexes[randomIndex];
+            indexes[randomIndex] = temp;
         }
-
-        return collision;
+        return indexes;
     }
-
 
     public void draw(Graphics2D g2) {
         int playerX = gp.player.worldX;
@@ -161,35 +169,25 @@ public class Monsters extends Entity {
         int distanceX = Math.abs(worldX - playerX);
         int distanceY = Math.abs(worldY - playerY);
 
-
         if (distanceX < gp.screenWidth / 2 && distanceY < gp.screenHeight / 2) {
-            g2.drawImage(right1, screenX, screenY, gp.tileSize, gp.tileSize, null);
-        }
-    }
-    public void checkMonsterCollision(Entity monster) {
-        for (int i = 0; i < gp.monsters.length; i++) {
-            if (gp.monsters[i] != null && gp.monsters[i] != monster) {
-                Rectangle monsterSolidArea = new Rectangle(gp.monsters[i].solidArea);
-                Rectangle thisMonsterSolidArea = new Rectangle(monster.solidArea);
+            BufferedImage image = null;
 
-
-                thisMonsterSolidArea.x = monster.worldX + monster.solidArea.x;
-                thisMonsterSolidArea.y = monster.worldY + monster.solidArea.y;
-
-                monsterSolidArea.x = gp.monsters[i].worldX + gp.monsters[i].solidArea.x;
-                monsterSolidArea.y = gp.monsters[i].worldY + gp.monsters[i].solidArea.y;
-
-                if (thisMonsterSolidArea.intersects(monsterSolidArea)) {
-
-                    monster.collisionOn = true;
-                    System.out.println("Monster collision detected!");
-                }
+            switch (direction) {
+                case "up":
+                    image = (spriteNum == 1) ? up1 : up2;
+                    break;
+                case "down":
+                    image = (spriteNum == 1) ? down1 : down2;
+                    break;
+                case "left":
+                    image = (spriteNum == 1) ? left1 : left2;
+                    break;
+                case "right":
+                    image = (spriteNum == 1) ? right1 : right2;
+                    break;
             }
+
+            g2.drawImage(image, screenX, screenY, gp.tileSize, gp.tileSize, null);
         }
     }
-
-
-
-
-
 }

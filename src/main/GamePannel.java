@@ -1,23 +1,28 @@
 package main;
 
-import entity.Entity;
 import entity.Monsters;
 import entity.Player;
+import entity.Skeleton;
 import object.SuperObject;
 import tile.TileManager;
+import java.util.List;
+import java.util.ArrayList;
+
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.*;
+
 
 public class GamePannel extends JPanel implements Runnable {
     final int orginalTileSize = 16; // 16 * 16 tiles
     final int scale = 3;
 
     public final int  tileSize = orginalTileSize * scale ; // what we see is this wich is 48 * 48
-    public final int maxScreenCol = 16 ;
-    public final int maxScreenRow = 12 ;
-    public final int screenWidth = maxScreenCol * tileSize ; // 768 pixels
-    public final int screenHeight = maxScreenRow * tileSize ; // 576 pixels
+    public final int maxScreenCol = 24 ;
+    public final int maxScreenRow = 18 ;
+    public final int screenWidth = maxScreenCol * tileSize ;
+    public final int screenHeight = maxScreenRow * tileSize ;
 
     int FPS = 60;
 
@@ -33,10 +38,10 @@ public class GamePannel extends JPanel implements Runnable {
     public AssetSetter aSetter = new AssetSetter(this);
 
     public final int maxWorldCol = 32;
-    public final int maxWorldRow = 64;
+    public final int maxWorldRow = 32;
 
 
-    public Monsters[] monsters = new Monsters[5];
+    public Monsters[] monsters = new Monsters[20];
 
 
 
@@ -52,26 +57,74 @@ public class GamePannel extends JPanel implements Runnable {
         this.setFocusable(true);
     }
 
-    public void setUpGame(){
+    public void setUpGame() {
         aSetter.setObject();
         playMusic(0);
-        for (int i = 0; i < monsters.length; i++) {
-            monsters[i] = new Monsters(this);
-            monsters[i].worldX = (i + 10) * tileSize;
-            monsters[i].worldY = 10 * tileSize;
+
+        String filePath = "/maps/map1.txt";
+        List<String> newMapData = new ArrayList<>();
+
+        try {
+            InputStream inputStream = getClass().getResourceAsStream(filePath);
+
+            if (inputStream == null) {
+                throw new FileNotFoundException("File not found: " + filePath);
+            }
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
+            String line;
+            int row = 0;
+
+            while ((line = br.readLine()) != null) {
+
+                line = line.trim();
+
+                if (!line.isEmpty()) {
+                    String[] tiles = line.split("\\s+");
+
+                    for (int col = 0; col < tiles.length; col++) {
+
+                        String tile = tiles[col].trim();
+
+                        if (!tile.isEmpty()) {
+                            try {
+                                int tileType = Integer.parseInt(tile);
+
+                                if (tileType == 6) { // Example for monster
+                                    spawnMonster(new Monsters(this), col, row);
+                                    tiles[col] = "0"; // replace monster spawn with an empty tile
+                                } else if (tileType == 5) { // Example for Skeleton
+                                    spawnMonster(new Skeleton(this), col, row);
+                                    tiles[col] = "0"; // replace skeleton spawn with an empty tile
+                                }
+                            } catch (NumberFormatException e) {
+                                System.out.println("Invalid number format: " + tile);
+                            }
+                        }
+                    }
+
+                    newMapData.add(String.join(" ", tiles));
+                    row++;
+                }
+            }
+            br.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        monsters[0].worldX = 20 * tileSize;
-        monsters[0].worldY = 20 * tileSize;
+    }
 
-        monsters[1].worldX = 15 * tileSize;
-        monsters[1].worldY = 25 * tileSize;
 
-        monsters[2].worldX = 25 * tileSize;
-        monsters[2].worldY = 25 * tileSize;
-//        monsters[0] = new Monsters(this);
-//        monsters[0].worldX = ( 5) * tileSize;
-//        monsters[0].worldY = 10 * tileSize;
 
+    private void spawnMonster(Monsters monster, int col, int row) {
+        for (int i = 0; i < monsters.length; i++) {
+            if (monsters[i] == null) {
+                monsters[i] = monster;
+                monsters[i].worldX = col * tileSize;
+                monsters[i].worldY = row * tileSize;
+                break;
+            }
+        }
     }
 
     public void stratGameThread(){
@@ -129,14 +182,14 @@ public class GamePannel extends JPanel implements Runnable {
             }
         }
 
-        player.draw(g2);
+
 
         for (Monsters monster : monsters) {
             if (monster != null) {
                 monster.draw(g2);
             }
         }
-
+        player.draw(g2);
         ui.drawUI(g2);
         g2.dispose();
     }
